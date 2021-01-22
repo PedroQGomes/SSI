@@ -11,41 +11,40 @@ from email.mime.multipart import MIMEMultipart
 
 from fuse import FUSE, FuseOSError, Operations
 
-def handler(signum, frame):
-    print("BOUAS IRMAOS40")
-    raise IOError("Couldn't open device!")
 
-def sendEmail(email, code):
-    print("BOUAS IRMAOS30")
-   
+
+def handler(signum, frame):
+    raise IOError("Erro: algo correu mal")
+
+def sendCode(email, code):
+
     msg = MIMEMultipart()
 
     msg['From'] = "ssitp32021@gmail.com"
     msg['To'] = email
-    msg['Subject'] = "TS - FUSE code"
+    msg['Subject'] = "File System Code"
 
-    body = "O código para acesso às funcionalidades pedidas: " + code
-
-    msg.attach(MIMEText(body, 'html'))
+    msg.attach(MIMEText(code, 'html'))
 
     try:
+    
         server = smtplib.SMTP("smtp.gmail.com", 587)
-
+    
         server.starttls()
-
-        server.login(msg['From'], "&/=4{6(_>33'7(!-")
+       
+        server.login(msg['From'], "fmfcpzavetqviqio")
         
         server.sendmail(msg['From'], email, msg.as_string())
         
         server.close()
-        print("Email Sent Successfully")
+        print("Email enviado com sucesso")
         return True
     except:
-        print ("failed to send mail")
+        print ("Erro: envio do email falhou")
         return False
 
 def verifyToken(token):
-    print("BOUAS IRMAOS50")
+    
     # Verificar Codigo de Validacao.
     print("Introduza o Codigo de Validacao.")
     validationCode = input()
@@ -56,22 +55,17 @@ def verifyToken(token):
         print("Codigo Incorreto.")
         return False
 
-class Passthrough(Operations):
+class Filesystem(Operations):
 
     def __init__(self, root):
-        print("BOUAS IRMAOS1")
         self.root = root
     
     def open(self, path, flags):
-        print("BOUAS IRMAOS2")
         full_path = self._full_path(path)
         
-        # Introdução do Identificador do Utilizador a querer aceder.
-        print("Introduza o seu Identificador.")
+        print("Introduza o seu Username")
         username = input()
-
-        # Abertura do Ficheiro de Users com permissão para executar o open.
-        os.chmod("users.txt", 400)
+        
         with open('users.txt', 'r') as ficheiroUsers:
 
             for line in ficheiroUsers:
@@ -81,8 +75,8 @@ class Passthrough(Operations):
 
                     # Tratar de Enviar o SMS.
                     # Strip trata de remover espacos e outros caracteres desnecessarios.
-                    tokenToSend = str(random.randint(100000, 999999))
-                    e = sendEmail(user[1].strip(), tokenToSend)
+                    token = str(random.randint(100000, 999999))
+                    e = sendCode(user[1].strip(), token)
                     if e:
                         
                         # Parte de verificacao e possivel timeout.
@@ -90,7 +84,7 @@ class Passthrough(Operations):
                         try:
                             signal.signal(signal.SIGALRM, handler)
                             signal.alarm(timeout)
-                            v = verifyToken(tokenToSend)
+                            v = verifyToken(token)
                             signal.alarm(0)
                             if v:
                                 os.chmod("users.txt", 000)
@@ -100,7 +94,7 @@ class Passthrough(Operations):
                                 return 0
                         except IOError:
                             os.chmod("users.txt", 000)
-                            print("\nExcedeu o tempo limite.\n")
+                            print("\n Passaram os 30 segundos de tempo permitido \n")
                     else: 
                         os.chmod("users.txt", 000)
                         return 0
@@ -109,7 +103,6 @@ class Passthrough(Operations):
     # =======
 
     def _full_path(self, partial):
-        print("BOUAS IRMAOS3")
         if partial.startswith("/"):
             partial = partial[1:]
         path = os.path.join(self.root, partial)
@@ -119,30 +112,22 @@ class Passthrough(Operations):
     # ==================
 
     def access(self, path, mode):
-        print("BOUAS IRMAOS4")
         full_path = self._full_path(path)
         if not os.access(full_path, mode):
             raise FuseOSError(errno.EACCES)
 
     def chmod(self, path, mode):
-        print("BOUAS IRMAOS5")
         full_path = self._full_path(path)
         return os.chmod(full_path, mode)
 
-    def chown(self, path, uid, gid):
-        print("BOUAS IRMAOS6")
-        full_path = self._full_path(path)
-        return os.chown(full_path, uid, gid)
 
     def getattr(self, path, fh=None):
-        print("BOUAS IRMAOS7")
         full_path = self._full_path(path)
         st = os.lstat(full_path)
         return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                      'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
     def readdir(self, path, fh):
-        print("BOUAS IRMAOS8")
         full_path = self._full_path(path)
 
         dirents = ['.', '..']
@@ -152,7 +137,6 @@ class Passthrough(Operations):
             yield r
 
     def readlink(self, path):
-        print("BOUAS IRMAOS9")
         pathname = os.readlink(self._full_path(path))
         if pathname.startswith("/"):
             # Path name is absolute, sanitize it.
@@ -161,20 +145,16 @@ class Passthrough(Operations):
             return pathname
 
     def mknod(self, path, mode, dev):
-        print("BOUAS IRMAOS10")
         return os.mknod(self._full_path(path), mode, dev)
 
     def rmdir(self, path):
-        print("BOUAS IRMAOS11")
         full_path = self._full_path(path)
         return os.rmdir(full_path)
 
     def mkdir(self, path, mode):
-        print("BOUAS IRMAOS12")
         return os.mkdir(self._full_path(path), mode)
 
     def statfs(self, path):
-        print("BOUAS IRMAOS13")
         full_path = self._full_path(path)
         stv = os.statvfs(full_path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
@@ -182,67 +162,54 @@ class Passthrough(Operations):
             'f_frsize', 'f_namemax'))
 
     def unlink(self, path):
-        print("BOUAS IRMAOS14")
         return os.unlink(self._full_path(path))
 
     def symlink(self, name, target):
-        print("BOUAS IRMAOS15")
         return os.symlink(target, self._full_path(name))
 
     def rename(self, old, new):
-        print("BOUAS IRMAOS16")
         return os.rename(self._full_path(old), self._full_path(new))
 
     def link(self, target, name):
-        print("BOUAS IRMAOS17")
         return os.link(self._full_path(name), self._full_path(target))
 
     def utimens(self, path, times=None):
-        print("BOUAS IRMAOS18")
         return os.utime(self._full_path(path), times)
 
     # File Methods
     # ============
 
     def create(self, path, mode, fi=None):
-        print("BOUAS IRMAOS19")
         full_path = self._full_path(path)
         return os.open(full_path, os.O_WRONLY | os.O_CREAT, mode)
 
     def read(self, path, length, offset, fh):
-        print("BOUAS IRMAOS20")
         os.lseek(fh, offset, os.SEEK_SET)
         return os.read(fh, length)
 
     def write(self, path, buf, offset, fh):
-        print("BOUAS IRMAOS21")
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, buf)
 
     def truncate(self, path, length, fh=None):
-        print("BOUAS IRMAOS21")
         full_path = self._full_path(path)
         with open(full_path, 'r+') as f:
             f.truncate(length)
 
     def flush(self, path, fh):
-        print("BOUAS IRMAOS22")
         return os.fsync(fh)
 
     def release(self, path, fh):
-        print("BOUAS IRMAOS23")
         return os.close(fh)
 
     def fsync(self, path, fdatasync, fh):
-        print("BOUAS IRMAOS24")
         return self.flush(path, fh)
 
 
 def main(mountpoint, root):
-    # colocar o ficheiro das permissões sem se poder ler.
-    print("BOUAS IRMAOS")
-    os.chmod("users.txt", 000)
-    FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)
+    print("Sistema de ficheiros iniciado")
+    os.chmod("users.txt", 400)
+    FUSE(Filesystem(root), mountpoint, nothreads=True, foreground=True)
 
 if __name__ == '__main__':
     main(sys.argv[2], sys.argv[1])
