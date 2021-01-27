@@ -6,6 +6,7 @@ import random
 import signal
 
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -43,61 +44,10 @@ def sendCode(email, code):
         print ("Erro: envio do email falhou")
         return False
 
-def verifyToken(token):
-    
-    # Verificar Codigo de Validacao.
-    print("Introduza o Codigo de Validacao.")
-    validationCode = input()
-    if (str(token) == validationCode):
-        print("Codigo Validado.")
-        return True
-    else:
-        print("Codigo Incorreto.")
-        return False
-
 class Filesystem(Operations):
 
     def __init__(self, root):
         self.root = root
-    
-    def open(self, path, flags):
-        full_path = self._full_path(path)
-        
-        print("Introduza o seu Username")
-        username = input()
-        
-        with open('users.txt', 'r') as ficheiroUsers:
-
-            for line in ficheiroUsers:
-                user = line.split('/')
-
-                if(user[0] == username): 
-
-                    # Tratar de Enviar o SMS.
-                    # Strip trata de remover espacos e outros caracteres desnecessarios.
-                    token = str(random.randint(100000, 999999))
-                    e = sendCode(user[1].strip(), token)
-                    if e:
-                        
-                        # Parte de verificacao e possivel timeout.
-                        timeout = 30
-                        try:
-                            signal.signal(signal.SIGALRM, handler)
-                            signal.alarm(timeout)
-                            v = verifyToken(token)
-                            signal.alarm(0)
-                            if v:
-                                os.chmod("users.txt", 000)
-                                return os.open(full_path, flags)
-                            else: 
-                                os.chmod("users.txt", 000)
-                                return 0
-                        except IOError:
-                            os.chmod("users.txt", 000)
-                            print("\n Passaram os 30 segundos de tempo permitido \n")
-                    else: 
-                        os.chmod("users.txt", 000)
-                        return 0
 
     # Helpers
     # =======
@@ -113,8 +63,48 @@ class Filesystem(Operations):
 
     def access(self, path, mode):
         full_path = self._full_path(path)
-        if not os.access(full_path, mode):
-            raise FuseOSError(errno.EACCES)
+        
+        print("Introduza o seu Username")
+        username = input()
+        
+        with open('users.txt', 'r') as utilizadores:
+
+            for linha in utilizadores:
+                usr = linha.split('/')
+
+                if(usr[0] == username): 
+
+                    # envia o email
+                    token = str(random.randint(100000, 999999))
+                    codeSended = sendCode(usr[1].strip(), token)
+                    if codeSended:
+
+                        svSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                        svSocket.connect((socket.gethostname(), 12345))
+
+                        svSocket.settimeout(30)
+
+                      
+                        bytes = svSocket.recv(6)
+                          
+                    
+
+                        print("codigo recebido")
+                        msg = bytes.decode("utf-8")
+                        
+                        print("mensagem: " + msg)
+                        
+                        if(msg == token):
+                            print("codigo valido")
+                            full_path = self._full_path(path)
+                        else:
+                            print("codigo invalido")
+                            raise FuseOSError(errno.EACCES)
+                            s.close()
+
+                    else: 
+                        raise FuseOSError(errno.EACCES)
 
     def chmod(self, path, mode):
         full_path = self._full_path(path)
@@ -129,7 +119,6 @@ class Filesystem(Operations):
 
     def readdir(self, path, fh):
         full_path = self._full_path(path)
-
         dirents = ['.', '..']
         if os.path.isdir(full_path):
             dirents.extend(os.listdir(full_path))
@@ -139,7 +128,6 @@ class Filesystem(Operations):
     def readlink(self, path):
         pathname = os.readlink(self._full_path(path))
         if pathname.startswith("/"):
-            # Path name is absolute, sanitize it.
             return os.path.relpath(pathname, self.root)
         else:
             return pathname
@@ -176,12 +164,14 @@ class Filesystem(Operations):
     def utimens(self, path, times=None):
         return os.utime(self._full_path(path), times)
 
-    # File Methods
-    # ============
 
     def create(self, path, mode, fi=None):
         full_path = self._full_path(path)
         return os.open(full_path, os.O_WRONLY | os.O_CREAT, mode)
+    
+    def open(self, path, flags):
+        full_path = self._full_path(path)
+        return os.open(full_path, flags)
 
     def read(self, path, length, offset, fh):
         os.lseek(fh, offset, os.SEEK_SET)
