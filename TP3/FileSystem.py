@@ -4,7 +4,7 @@ import stat
 import errno
 import random
 import signal
-
+import pwd
 import smtplib
 import socket
 from email.mime.text import MIMEText
@@ -13,9 +13,53 @@ from email.mime.multipart import MIMEMultipart
 from fuse import FUSE, FuseOSError, Operations
 
 
+def validaUsr():
 
-def handler(signum, frame):
-    raise IOError("Erro: algo correu mal")
+    username = pwd.getpwuid (os.getuid()).pw_name
+    
+    codeSended = False
+    
+    with open('users.txt', 'r') as utilizadores:
+
+        for linha in utilizadores:
+            usr = linha.split('/')
+
+            if(usr[0] == username): 
+                # envia o email
+                token = str(random.randint(10000000, 99999999))
+                codeSended = sendCode(usr[1].strip(), token)
+        
+     
+    if not codeSended:
+        print("Erro - Utilizador invalido")
+        return False
+
+    svSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    svSocket.connect((socket.gethostname(), 12345))
+
+    svSocket.settimeout(30)
+
+    try:
+        bytes = svSocket.recv(8)
+
+        print("codigo recebido")
+
+        msg = bytes.decode("utf-8")
+
+    except socket.timeout:
+        print("Erro: Expiraram os 30 segundos")
+        msg = "   "
+    finally:
+        svSocket.close()
+                  
+
+    if msg == token:
+        return True
+    else:
+        return False
+
+
 
 def sendCode(email, code):
 
@@ -44,7 +88,7 @@ def sendCode(email, code):
         print ("Erro: envio do email falhou")
         return False
 
-class Filesystem(Operations):
+class Passthrough(Operations):
 
     def __init__(self, root):
         self.root = root
@@ -62,49 +106,10 @@ class Filesystem(Operations):
     # ==================
 
     def access(self, path, mode):
-        full_path = self._full_path(path)
-        
-        print("Introduza o seu Username")
-        username = input()
-        
-        with open('users.txt', 'r') as utilizadores:
+        full_path = self._full_path(path)            
+        if not os.access(full_path, mode):
+            raise FuseOSError(errno.EACCES)
 
-            for linha in utilizadores:
-                usr = linha.split('/')
-
-                if(usr[0] == username): 
-
-                    # envia o email
-                    token = str(random.randint(100000, 999999))
-                    codeSended = sendCode(usr[1].strip(), token)
-                    if codeSended:
-
-                        svSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-                        svSocket.connect((socket.gethostname(), 12345))
-
-                        svSocket.settimeout(30)
-
-                      
-                        bytes = svSocket.recv(6)
-                          
-                    
-
-                        print("codigo recebido")
-                        msg = bytes.decode("utf-8")
-                        
-                        print("mensagem: " + msg)
-                        
-                        if(msg == token):
-                            print("codigo valido")
-                            full_path = self._full_path(path)
-                        else:
-                            print("codigo invalido")
-                            raise FuseOSError(errno.EACCES)
-                            s.close()
-
-                    else: 
-                        raise FuseOSError(errno.EACCES)
 
     def chmod(self, path, mode):
         full_path = self._full_path(path)
@@ -170,8 +175,13 @@ class Filesystem(Operations):
         return os.open(full_path, os.O_WRONLY | os.O_CREAT, mode)
     
     def open(self, path, flags):
-        full_path = self._full_path(path)
-        return os.open(full_path, flags)
+        print("Pedido para Abrir ficheiro recebido")
+        valido = validaUsr()
+        if valido:
+            full_path = self._full_path(path)
+            return os.open(full_path, flags)
+        else:
+            raise FuseOSError(errno.EACCES)
 
     def read(self, path, length, offset, fh):
         os.lseek(fh, offset, os.SEEK_SET)
@@ -199,7 +209,7 @@ class Filesystem(Operations):
 def main(mountpoint, root):
     print("Sistema de ficheiros iniciado")
     os.chmod("users.txt", 400)
-    FUSE(Filesystem(root), mountpoint, nothreads=True, foreground=True)
+    FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)
 
 if __name__ == '__main__':
     main(sys.argv[2], sys.argv[1])

@@ -13,4 +13,5 @@ while True:
     input1 = (f"{input()}")
 
     clientsocket.send(bytes(f"{input1}", "utf-8"))
+    print("Dados enviados - Terminar Conneçao")
     clientsocket.close()
