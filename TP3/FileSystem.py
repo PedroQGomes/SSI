@@ -12,10 +12,38 @@ from email.mime.multipart import MIMEMultipart
 
 from fuse import FUSE, FuseOSError, Operations
 
+usertimeOut = 300
 
-def validaUsr():
 
+def handler(signum, frame):
+        print("acabou o tempo para o utilizador")
+        Passthrough.authenticadedUser = "none"
+
+def checkUsr():
     username = pwd.getpwuid (os.getuid()).pw_name
+    valido = False
+
+    usrAutenticado = Passthrough.authenticadedUser
+
+    print("recebi um pedido - " + usrAutenticado)
+    if usrAutenticado == username:
+        return True
+    else:
+        valido = validaUsr(username)
+
+    if valido :
+        Passthrough.authenticadedUser = username
+        signal.alarm(usertimeOut)
+        return True
+    else:
+        Passthrough.authenticadedUser = "none"
+        return False
+
+
+
+
+
+def validaUsr(username):
     
     codeSended = False
     
@@ -89,6 +117,8 @@ def sendCode(email, code):
         return False
 
 class Passthrough(Operations):
+
+    authenticadedUser = "none"
 
     def __init__(self, root):
         self.root = root
@@ -176,7 +206,7 @@ class Passthrough(Operations):
     
     def open(self, path, flags):
         print("Pedido para Abrir ficheiro recebido")
-        valido = validaUsr()
+        valido = checkUsr()
         if valido:
             full_path = self._full_path(path)
             return os.open(full_path, flags)
@@ -208,6 +238,7 @@ class Passthrough(Operations):
 
 def main(mountpoint, root):
     print("Sistema de ficheiros iniciado")
+    signal.signal(signal.SIGALRM,handler)
     os.chmod("users.txt", 400)
     FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)
 
