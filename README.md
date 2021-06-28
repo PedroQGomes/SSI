@@ -1,8 +1,7 @@
-# SSI
 # MIEI - 4ºAno - Segurança de Sistemas Informáticos 
 Trabalhos práticos sobre pen testing e scan ativo e passivo de serviços  
 
-## TP1 
+## Trabalho Pratico Nº1
 O primeiro trabalho pratico consiste na descrição de potenciais incidentes de segurança que um sistema, que consiste em duas aplicações moveis e um backend do sistema, pode estar exposto durante produção. 
 
 Algumas das técnicas usadas neste trabalho foram as seguintes
@@ -13,7 +12,7 @@ Algumas das técnicas usadas neste trabalho foram as seguintes
 * Analise de risco
 
 
-## TP2 
+## Trabalho Pratico Nº2 
 
 O segundo trabalho pratico tem duas fases em que a primeira consiste em escolher duas empresas, uma local e uma grande corporação, e efetuar técnicas de procura passiva de informação sobre as mesmas e comparar as diferenças nos resultados.\
 Na Segunda fase do trabalho foi configurado um ambiente de testes, uma maquina virtual com kali linux e outra maquina virtual com um sistema com diferentes vulnerabilidades `metasploitable 3`,  no qual técnicas de procura ativa de informação são usadas(scanning) para detetar vulnerabilidades e fraquezas num sistema remoto.
@@ -26,7 +25,7 @@ Algumas das ferramentas utilizadas para a segunda fase do trabalho pratico 2 for
 * Analisador de trafico - Wireshark
 
 
-## TP3 
+## Trabalho Pratico Nº3
 
 O terceiro trabalho pratico consiste na implementação de um mecanismo adicional de autorização de operações de aberturas de ficheiros. Este mecanismo foi implementado com base na `libfuse` e tem as seguintes funcionalidades 
 
